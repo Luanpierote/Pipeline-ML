@@ -1,0 +1,12 @@
+{
+  "name": "products",
+  "required": ["id", "price", "rating", "stock", "discountPercentage"],
+  "critical": ["price", "rating"],
+  "ranges": {
+    "price": [0, null],
+    "rating": [0, 5],
+    "stock": [0, null],
+    "discountPercentage": [0, 100]
+  },
+  "unique": ["id"]
+}
