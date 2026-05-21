@@ -1,4 +1,5 @@
 """ VALIDA ESQUEMA,TIPOS,RANGES """
+# ETAPA CONCLUÍDA✅
 import pandas as pd
 import requests
 from dataclasses import dataclass,field
