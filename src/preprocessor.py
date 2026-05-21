@@ -2,6 +2,7 @@
 
 # EM DESENVOLVIMENTO ⌛
 # PROXIMA ETAPA
+<<<<<<< HEAD
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder, OneHotEncoder
 import pandas as pd
 
@@ -13,13 +14,32 @@ class Preprocessor:
         "nome": ["Ana", "Carlos"],
         "idade": [20, 30]
     })
+=======
+import pandas as pd
+class Preprocessor:
+>>>>>>> dde64de2720a548f3847ad23ba8bd7779d0461a8
 
 # drop_cols — remoção de colunas desnecessárias (IDs, irrelevantes)
     # def drop_cols():
         
-# impute — imputação de valores nulos (median, mode, mean, zero)
-    # def impute():
-        
+# Lógica para imputar valores nulos usando diferentes estratégias
+    @staticmethod
+    def impute(self, df: pd.DataFrame, strategy: str = 'mean') -> pd.DataFrame:
+        if strategy == 'mean':
+            return df.fillna(df.mean(numeric_only=True)) 
+        elif strategy == 'median':
+            return df.fillna(df.median(numeric_only=True))
+        elif strategy == 'mode':
+            for col in df.columns:
+                mode = df[col].mode()
+                if not mode.empty:
+                    df[col] = df[col].fillna(mode[0])
+            return df 
+        elif strategy == 'zero':
+            return df.fillna(0)
+        else:
+            raise ValueError(f"Estratégia '{strategy}' não reconhecida. Use 'mean', 'median', 'mode' ou 'zero'.") 
+             
 # encode — codificação de variáveis categóricas (label, onehot)
     @staticmethod
     def encode(df,method):
