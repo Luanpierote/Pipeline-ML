@@ -8,5 +8,11 @@
     "stock": [0, null],
     "discountPercentage": [0, 100]
   },
+  "preprocessing": {
+    "encode": {
+      "category": "label",
+      "product_name": "onehot"
+    }
+},
   "unique": ["id"]
 }
