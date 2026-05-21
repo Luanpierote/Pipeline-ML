@@ -9,6 +9,7 @@ class Preprocessor:
     # def drop_cols():
         
 # Lógica para imputar valores nulos usando diferentes estratégias
+    @staticmethod
     def impute(self, df: pd.DataFrame, strategy: str = 'mean') -> pd.DataFrame:
         if strategy == 'mean':
             return df.fillna(df.mean(numeric_only=True)) 
