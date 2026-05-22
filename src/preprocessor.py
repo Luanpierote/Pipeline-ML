@@ -126,6 +126,29 @@ class Preprocessor:
 # scale — escalonamento de variáveis numéricas (standard, minmax)
     # def scale():
         
-# class Datapreprocessor:
-    # ler o config gerado pelo agente, garantir a ordem correta das etapas
-    # e devolver um DataFrame limpo e pronto para o modelo.
+class DataPreprocessor:
+
+    def __init__(self, config_path: str):
+        with open(config_path, "r", encoding="utf-8") as f:
+            self.config = json.load(f)
+
+    def run(self, df: pd.DataFrame) -> pd.DataFrame:
+
+        # 1. Remove colunas desnecessárias
+        coluna_alvo = self.config["required"][-1]
+        df = Preprocessor.drop_col(df, coluna_alvo=coluna_alvo)
+
+        # 2. Imputa nulos nas colunas críticas
+        df = Preprocessor.impute(None, df, strategy="mean")
+
+        # 3. Codifica colunas categóricas conforme o config
+        encode_map = self.config.get("preprocessing", {}).get("encode", {})
+        for coluna, metodo in encode_map.items():
+            if coluna in df.columns:
+                df = Preprocessor.encode(df, method=metodo)
+
+        return df
+
+
+preprocessor = DataPreprocessor("../config.json")
+df_limpo = preprocessor.run(df)
