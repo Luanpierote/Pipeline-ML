@@ -2,7 +2,6 @@
 
 # EM DESENVOLVIMENTO ⌛
 # PROXIMA ETAPA
-<<<<<<< HEAD
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder, OneHotEncoder
 import pandas as pd
 
@@ -11,13 +10,9 @@ import pandas as pd
 class Preprocessor:
 
     df = pd.DataFrame({
-        "nome": ["Ana", "Carlos"],
+        "nome": ["Ana", "Carlos"],  
         "idade": [20, 30]
     })
-=======
-import pandas as pd
-class Preprocessor:
->>>>>>> dde64de2720a548f3847ad23ba8bd7779d0461a8
 
 # drop_cols — remoção de colunas desnecessárias (IDs, irrelevantes)
     # def drop_cols():
@@ -61,8 +56,6 @@ class Preprocessor:
 # print(Preprocessor.encode(df,encoder))           
 
 
-    
-        
 # scale — escalonamento de variáveis numéricas (standard, minmax)
     # def scale():
         
