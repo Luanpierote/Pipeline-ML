@@ -2,9 +2,10 @@
 
 # EM DESENVOLVIMENTO ⌛
 # PROXIMA ETAPA
-<<<<<<< HEAD
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder, OneHotEncoder
+from sklearn.feature_selection import VarianceThreshold
 import pandas as pd
+import numpy as np
 
 # @staticmethod - é um decorator do python que indica que o método não depende da instância(self) nem da classe para funcionar. pode chamar direto pela classe também
 
@@ -14,13 +15,72 @@ class Preprocessor:
         "nome": ["Ana", "Carlos"],
         "idade": [20, 30]
     })
-=======
-import pandas as pd
-class Preprocessor:
->>>>>>> dde64de2720a548f3847ad23ba8bd7779d0461a8
 
-# drop_cols — remoção de colunas desnecessárias (IDs, irrelevantes)
-    # def drop_cols():
+#Remoção de colunas desnecessárias 
+    @staticmethod
+    def drop_col(
+        df                : pd.DataFrame,
+        coluna_alvo       : str,
+        limite_nulos      : float = 0.5,
+        limite_variancia  : float = 0.0,
+        limite_correlacao : float = 0.95,
+        verbose           : bool  = True
+    ) -> pd.DataFrame:
+        """Remove colunas irrelevantes por nulos, variância baixa e alta correlação."""
+        df_copia = df.copy()
+
+        proporcao_nulos = df_copia.isnull().mean()
+        colunas_nulos   = proporcao_nulos[proporcao_nulos > limite_nulos].index.tolist()
+
+        df_copia.drop(columns=colunas_nulos, inplace=True)
+
+        if verbose and colunas_nulos:
+            print(f"[nulos]      Removidas (> {limite_nulos*100:.0f}% nulos): {colunas_nulos}")
+
+        cols_numericas      = df_copia.select_dtypes(include=np.number).columns.tolist()
+        cols_para_variancia = [c for c in cols_numericas if c != coluna_alvo]
+
+        if cols_para_variancia:
+            seletor           = VarianceThreshold(threshold=limite_variancia)
+            seletor.fit(df_copia[cols_para_variancia])
+            colunas_variancia = [
+                col for col, mantida in zip(cols_para_variancia, seletor.get_support())
+                if not mantida
+            ]
+
+            df_copia.drop(columns=colunas_variancia, inplace=True)
+
+            if verbose and colunas_variancia:
+                print(f"[variância]  Removidas (< {limite_variancia}): {colunas_variancia}")
+
+        cols_para_corr = [
+            c for c in df_copia.columns
+            if c != coluna_alvo and df_copia[c].dtype != object
+        ]
+
+        if not cols_para_corr:
+            if verbose:
+                print("[correlação] Nenhuma feature numérica restante para verificar.")
+            return df_copia
+
+        matriz_corr   = df_copia[cols_para_corr].corr().abs()
+        triangulo_sup = matriz_corr.where(
+            np.triu(np.ones(matriz_corr.shape), k=1).astype(bool)
+        )
+        colunas_corr = [
+            col for col in triangulo_sup.columns
+            if any(triangulo_sup[col] > limite_correlacao)
+        ]
+
+        df_copia.drop(columns=colunas_corr, inplace=True)
+
+        if verbose and colunas_corr:
+            print(f"[correlação] Removidas (> {limite_correlacao}): {colunas_corr}")
+
+        if verbose:
+            total_removidas = len(colunas_nulos) + len(colunas_variancia) + len(colunas_corr)
+            print(f"\nTotal removidas: {total_removidas} | Colunas restantes: {df_copia.shape[1]}")
+        return df_copia
         
 # Lógica para imputar valores nulos usando diferentes estratégias
     @staticmethod
