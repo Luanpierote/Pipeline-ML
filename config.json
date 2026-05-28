@@ -14,5 +14,6 @@
       "product_name": "onehot"
     }
 },
+  "model_class": "sklearn.cluster.DBSCAN", "model_params": { "eps": 0.5 } ,
   "unique": ["id"]
 }

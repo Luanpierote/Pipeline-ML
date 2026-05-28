@@ -2,7 +2,7 @@
 # EM DESENVOLVIMENTO - Pronto, porém, demanda testes⌛
 import json
 from src.loader import DataLoader
-from src.pipeline.runner import PipelineRunner
+from pipeline.runner import PipelineRunner
   
 #    Agente heurístico que analisa o dataset e decide automaticamente
 #     como configurar o pipeline — sem intervenção humana. 
