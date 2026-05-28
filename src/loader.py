@@ -1,63 +1,107 @@
 """ CARREGA OS DADOS """
-# EM DESENVOLVIMENTO ⌛
-from sklearn.pipeline import Pipeline
-import requests
-import os
-import json
-import pandas as pd
+# CÓDIGO REFATORADO E FUNCIONAL ✅
+# Caso o algoritmo apresente inconsistências, reveja a lógica do compilador Regex responsável por identificar URLs.
 
-api_users = "https://dummyjson.com/users"
-api_products = "https://dummyjson.com/products"
+# Permite usar "str | Path" como tipo mesmo em outras versões do python
+from __future__ import annotations
+ 
+import json  # lê e escreve arquivos .json
+import re    # regex para detectar se o path é uma URL
+from pathlib import Path   # manipulação de caminhos de pasta/arquivo
+from typing import Any     # tipo genérico usado no retorno de profile()
+ 
+import pandas as pd   # monta o DataFrame com os registros carregados
+import requests       # faz requisições HTTP para APIs REST
+ 
+# Regex que identifica se uma string é URL:
+#   ^https?://          → começa com http:// ou https://
+#   ^[^/\\]+\.[^/\\]+/ → ou tem um domínio com ponto antes da primeira barra (ex: site.com/rota)
+_IS_URL = re.compile(r"^https?://|^[^/\\]+\.[^/\\]+/")
 
 # Criando pipelines - Em Desenvolvimento⌛
 # numeric_transformer = Pipeline(steps = [('scaler', StandardScaler())])
 # categorical_transformer = Pipeline(steps=[('ohe', OneHotCategoricalEncoder())])
+class DataLoader:
+  
+    # Parameters
+    # ----------
+    # path     : URL da API ou caminho de pasta local (detectado automaticamente)
+    # root_key : chave do JSON com os registros — obrigatório para APIs
+    # api_key  : Bearer token, se necessário
+    
+  def __init__(self, path: str | Path, root_key: str | None = None, api_key: str | None = None):
+    raw          = str(path)
+    self._is_api = bool(_IS_URL.match(raw)) # True se for URL, False se for pasta
+    self.path    = (f"https://{raw}" if not raw.startswith("http") else raw) if self._is_api else Path(raw) # normaliza URL ou converte para Path
+    self.root_key, self.api_key, self._df = root_key, api_key, None # armazena configs e inicializa df vazio
 
-def extract_data(endpoint):
-  response = requests.get(endpoint)
-  if response.status_code == 200:
-    return response.json()
-  else:
-    print(f"Erro ao acessar a API. Código de status: {response.status_code}")
-    return None
+  def _get(self, url: str) -> dict | None:
+      """Faz GET na URL e retorna o JSON. Retorna None se falhar."""
+      headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+      try:
+          r = requests.get(url, headers=headers, timeout=10)
+          r.raise_for_status()
+          return r.json()
+      except requests.exceptions.RequestException as e:
+          print(f"[DataLoader] {e}"); return None
 
-# Pega o Json e carrega em outra pasta
-def load_data(data,path):
-  # Cria a pasta caso não exista
-  os.makedirs(path, exist_ok=True)
-  # dentro da pasta criar um arquivo JSON com o nome do arquivo sendo o id o nome do arquivo.json
-  with open(f"{path}/{data['id']}.json","w") as f:
-    # Converte o json para um arquivo
-    json.dump(data,f)
+  
+  def _from_api(self, save_folder: Path | None) -> pd.DataFrame:
+        """Busca registros da API e, opcionalmente, salva cada um como .json em save_folder."""
+        if not self.root_key:
+            raise ValueError("root_key obrigatório para APIs.")
+        payload = self._get(str(self.path))
+        if not payload or self.root_key not in payload:
+            raise RuntimeError(f"Chave {self.root_key!r} não encontrada em {self.path!r}.")
+        records = payload[self.root_key]
+        if save_folder:
+            save_folder.mkdir(parents=True, exist_ok=True)
+            for r in records:
+                (save_folder / f"{r.get('id', hash(json.dumps(r, sort_keys=True)))}.json"
+                 ).write_text(json.dumps(r, ensure_ascii=False, indent=2))
+        return pd.DataFrame(records)
 
+  def _from_folder(self) -> pd.DataFrame:
+        """Lê todos os arquivos .json de uma pasta e retorna um DataFrame."""
+        folder = Path(self.path)
+        if not folder.is_dir():
+            raise FileNotFoundError(f"Pasta não encontrada: {folder!r}")
+        records = []
+        for f in sorted(folder.glob("*.json")):
+            try: records.append(json.loads(f.read_text()))
+            except (json.JSONDecodeError, OSError) as e: print(f"[DataLoader] Ignorando {f.name}: {e}")
+        return pd.DataFrame(records)
 
-def load_loop_data(endpoint):
-  url = "https://dummyjson.com/" + endpoint
-  # ex: df_users = pd.DataFrame(extract_data(api_users)["users"])
-  df = pd.DataFrame(extract_data(url)[endpoint])
+  def load(self, save_folder: str | Path | None = None) -> pd.DataFrame:
+        """Carrega dados detectando a origem automaticamente."""
+        self._df = (
+            self._from_api(Path(save_folder) if save_folder else None)
+            if self._is_api else self._from_folder()
+        )
+        return self._df
 
-  if df.empty:
-    print(f"Erro ao extrair a API: {url}")
-    return
+   
+  # precisa retornar tudo que o agente vai usar para tomar decisões. Conectando com cada _decide_*()
+  def profile(self) -> dict[str, Any]:
+        """Perfil estrutural do DataFrame para agentes de ML."""
+        if self._df is None:
+            raise RuntimeError("Chame load() antes de profile().")
+        df = self._df[[c for c in self._df if not self._df[c].map(lambda x: isinstance(x, (list, dict))).any()]]
+        return {
+            "n_rows":           int(df.shape[0]),
+            "n_cols":           int(df.shape[1]),
+            "columns":          df.columns.tolist(),
+            "numeric_cols":     df.select_dtypes(include="number").columns.tolist(),
+            "categorical_cols": df.select_dtypes(include="object").columns.tolist(),
+            "missing_per_col":  df.isnull().sum().to_dict(),
+            "unique_per_col":   df.nunique().to_dict(),
+            "dtypes":           {c: str(t) for c, t in df.dtypes.items()},
+        }
 
-  # Para iterar o dicionário e preencher o arquivo com todos os ids
-  for _, row in df.iterrows():
-    load_data(row.to_dict(), endpoint)
-
-endpoints = ["users","products"]
-
-for endpoint in endpoints:
-    load_loop_data(endpoint)
-
-# Visualização dos arquivos JSON em dataframe
-def read_folder(path):
-    data = []
-    for file in os.listdir(path):
-        with open(f"{path}/{file}", "r") as f:
-            data.append(json.load(f))
-    return pd.DataFrame(data)
-
-
-
-df = read_folder("products")
-print(df.iloc[:,:])
+""" TESTE """
+if __name__ == "__main__":
+    df = DataLoader("dummyjson.com/products", root_key="products").load(save_folder="products")
+    print(df.shape)
+ 
+    df2 = DataLoader("products").load()
+    print(df2.shape)

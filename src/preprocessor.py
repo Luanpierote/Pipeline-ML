@@ -6,6 +6,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder, On
 from sklearn.feature_selection import VarianceThreshold
 import pandas as pd
 import numpy as np
+import json
 
 # @staticmethod - é um decorator do python que indica que o método não depende da instância(self) nem da classe para funcionar. pode chamar direto pela classe também
 
@@ -84,7 +85,7 @@ class Preprocessor:
         
 # Lógica para imputar valores nulos usando diferentes estratégias
     @staticmethod
-    def impute(self, df: pd.DataFrame, strategy: str = 'mean') -> pd.DataFrame:
+    def impute( df: pd.DataFrame, strategy: str = 'mean') -> pd.DataFrame:
         if strategy == 'mean':
             return df.fillna(df.mean(numeric_only=True)) 
         elif strategy == 'median':
@@ -99,8 +100,9 @@ class Preprocessor:
             return df.fillna(0)
         else:
             raise ValueError(f"Estratégia '{strategy}' não reconhecida. Use 'mean', 'median', 'mode' ou 'zero'.") 
-             
-# encode — codificação de variáveis categóricas (label, onehot)
+        
+    # REVISAR
+    # encode — codificação de variáveis categóricas (label, onehot)
     @staticmethod
     def encode(df,method):
 
@@ -120,33 +122,38 @@ class Preprocessor:
 
 # print(Preprocessor.encode(df,encoder))           
 
-
 # scale — escalonamento de variáveis numéricas (standard, minmax)
     # def scale():
+    
         
 class DataPreprocessor:
 
-    def __init__(self, config_path: str):
-        with open(config_path, "r", encoding="utf-8") as f:
-            self.config = json.load(f)
+    def __init__(self, config: str):
+        if isinstance(config, str):         # recebeu caminho do arquivo
+            with open(config, "r") as f:
+               self.config = json.load(f)
+        elif isinstance(config, dict):      # recebeu dicionário direto
+            self.config = config
 
     def run(self, df: pd.DataFrame) -> pd.DataFrame:
 
         # 1. Remove colunas desnecessárias
-        coluna_alvo = self.config["required"][-1]
-        df = Preprocessor.drop_col(df, coluna_alvo=coluna_alvo)
+         coluna_alvo = self.config["required"][-1]
+         df = Preprocessor.drop_col(df, coluna_alvo=coluna_alvo)
 
         # 2. Imputa nulos nas colunas críticas
-        df = Preprocessor.impute(None, df, strategy="mean")
+         df = Preprocessor.impute(df, strategy="mean")
 
         # 3. Codifica colunas categóricas conforme o config
-        encode_map = self.config.get("preprocessing", {}).get("encode", {})
-        for coluna, metodo in encode_map.items():
-            if coluna in df.columns:
-                df = Preprocessor.encode(df, method=metodo)
+         encode_map = self.config.get("preprocessing", {}).get("encode", {})
+         df = Preprocessor.encode(df, method=encode_map)
 
-        return df
+        # 4. Escala colunas numéricas conforme o config
+         scale_map = self.config.get("preprocessing", {}).get("scale", {})
+         df = Preprocessor.scale(df, method=scale_map)
 
+
+         return df
 
 preprocessor = DataPreprocessor("../config.json")
-df_limpo = preprocessor.run(df)
+df_limpo = preprocessor.run(DataPreprocessor.df)

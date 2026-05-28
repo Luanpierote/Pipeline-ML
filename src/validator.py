@@ -1,10 +1,10 @@
-""" VALIDA ESQUEMA,TIPOS,RANGES """
+""" VALIDA ESQUEMA,TIPOS,RANGES - Lê e reporta"""
 # ETAPA CONCLUÍDA✅
 import pandas as pd
 import requests
 from dataclasses import dataclass,field
 
-
+# O processo está manual⌛
 response = requests.get('https://dummyjson.com/products?limit=100')
 df = pd.DataFrame(response.json()['products'])
 
