@@ -2,6 +2,7 @@
 # EM DESENVOLVIMENTO - Pronto, porém, demanda testes⌛
 import json
 from src.loader import DataLoader
+from src.pipeline.runner import PipelineRunner
   
 #    Agente heurístico que analisa o dataset e decide automaticamente
 #     como configurar o pipeline — sem intervenção humana. 
@@ -129,6 +130,19 @@ def run_agent(csv_path: str) -> dict:
     # chama runner.run()
     # retorna o resultado
     return MLAgent(csv_path).run()
+
+if __name__ == "__main__":
+    # Roda todos os datasets listados no config.json
+    results = PipelineRunner.run_all("config.json")
+ 
+    for r in results:
+        if "error" not in r:
+            df = r["df_result"]
+            print(f"\nDataset : {r['config'].get('name')}")
+            print(f"Shape   : {df.shape}")
+            print(f"Resumo  : {r['summary']}")
+            print(df.head())
+
     
    
     
