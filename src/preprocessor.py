@@ -126,6 +126,26 @@ class Preprocessor:
     # def scale():
     
         
+    @staticmethod
+    def scale(df: pd.DataFrame, scale_map: dict):
+
+        df = df.copy()
+
+        for coluna, scaler_class in scale_map.items():
+
+            # verifica se a coluna existe
+            if coluna not in df.columns:
+                print(f"Coluna '{coluna}' não encontrada")
+                continue
+
+            # cria instância do scaler
+            scaler = scaler_class()
+
+            # aplica transformação
+            df[coluna] = scaler.fit_transform(df[[coluna]])
+
+        return df
+    
 class DataPreprocessor:
 
     def __init__(self, config: str):
@@ -156,4 +176,8 @@ class DataPreprocessor:
          return df
 
 preprocessor = DataPreprocessor("../config.json")
+
 df_limpo = preprocessor.run(DataPreprocessor.df)
+
+
+
