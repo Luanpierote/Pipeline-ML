@@ -50,9 +50,18 @@ class BaseModel(ABC):
         ...
  
     def summary(self) -> dict:
-        """Retorna um resumo dos resultados. Pode ser sobrescrito por subclasses."""
-        return {"model": self.__class__.__name__, "result": str(self.result_)}
-
+        """Retorna um dicionário com métricas e resultados estatísticos do modelo."""
+        if self.result_ is None:
+            return {
+                "modelo"    : self.__class__.__name__,
+                "config"    : self.config,
+                "resultado" : "modelo ainda não executado"
+            }
+        return {
+            "modelo"    : self.__class__.__name__,
+            "config"    : self.config,
+            "resultado" : self.result_
+        }
 
 # fit()            → cada subclasse implementa como quiser (X/y, fit_predict, pipeline com scaler...)
 # run()            → retorna o DataFrame do jeito que o modelo precisa
