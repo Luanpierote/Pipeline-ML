@@ -19,7 +19,7 @@ class BaseModel(ABC):
 
     def _resolve_model(self):
         """
-        Instancia qualquer classe sklearn a partir do config.
+        Instancia qualquer classe sklearn a partir das intruções do config(o importlib possibilita isso).
         Espera no config:
             "model_class"  : "sklearn.cluster.DBSCAN"
             "model_params" : { "eps": 0.5, "min_samples": 5 }

@@ -108,7 +108,16 @@ class MLAgent:
         Regra: sem coluna alvo clara → clustering (DBSCAN)
         """
         max_unique = max(self.profile["unique_per_col"].values(), default=0)
-        return "DBSCAN" if max_unique / self.profile["n_rows"] < 0.05 else "RandomForest"
+
+        if max_unique / self.profile["n_rows"] < 0.05:
+            return {
+                "model_class":  "sklearn.cluster.DBSCAN",
+                "model_params": { "eps": 0.5, "min_samples": 5 }
+            }
+        return {
+            "model_class":  "sklearn.ensemble.RandomForestClassifier",
+            "model_params": { "n_estimators": 100, "random_state": 42 }
+        }
 
 
 def run(self) -> dict:
