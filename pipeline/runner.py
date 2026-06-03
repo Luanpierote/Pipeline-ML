@@ -129,8 +129,6 @@ class PipelineRunner:
             summary    : métricas e metadados do modelo
             config     : config usado nesta execução
         """
-        # CONTRATO DIVERGENTE: "name" não é gerado pelo MLAgent — será None aqui
-        # até que o MLAgent passe a incluí-la no config.json
         name = self.config.get("name", "dataset")
         self._log(f"\n{'='*50}\n  PIPELINE: {name.upper()}\n{'='*50}")
  
