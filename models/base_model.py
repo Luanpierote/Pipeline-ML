@@ -46,9 +46,7 @@ class BaseModel(ABC):
  
     @abstractmethod
     def run(self, df: pd.DataFrame) -> pd.DataFrame:
-           def run(self, df: pd.DataFrame) -> pd.DataFrame:
         """Executa o modelo e retorna o DataFrame com as predições/rótulos."""
-    
         df_resultado = df.copy()
     
         if self._model is None:
