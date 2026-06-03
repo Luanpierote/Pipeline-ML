@@ -1,183 +1,155 @@
-""" LIMPEZA DO DATASET, PADRONIZAÇÃO E REDIMENSIONAMENTO """
+"""Pré-processamento dos dados do pipeline de Machine Learning.
 
-# EM DESENVOLVIMENTO ⌛
-# PROXIMA ETAPA
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder, OneHotEncoder
-from sklearn.feature_selection import VarianceThreshold
-import pandas as pd
-import numpy as np
+Responsável por aplicar as regras definidas no config.json:
+- drop_cols
+- impute
+- preprocessing.encode
+- preprocessing.scale
+"""
+from __future__ import annotations
+
 import json
+from pathlib import Path
+from typing import Any
 
-# @staticmethod - é um decorator do python que indica que o método não depende da instância(self) nem da classe para funcionar. pode chamar direto pela classe também
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
+
 
 class Preprocessor:
+    """Funções utilitárias de pré-processamento."""
 
-    df = pd.DataFrame({
-        "nome": ["Ana", "Carlos"],  
-        "idade": [20, 30]
-    })
-
-#Remoção de colunas desnecessárias 
     @staticmethod
-    def drop_col(
-        df                : pd.DataFrame,
-        coluna_alvo       : str,
-        limite_nulos      : float = 0.5,
-        limite_variancia  : float = 0.0,
-        limite_correlacao : float = 0.95,
-        verbose           : bool  = True
-    ) -> pd.DataFrame:
-        """Remove colunas irrelevantes por nulos, variância baixa e alta correlação."""
-        df_copia = df.copy()
+    def drop_columns(df: pd.DataFrame, columns: list[str] | None, target_column: str | None = None) -> pd.DataFrame:
+        """Remove apenas as colunas configuradas e preserva a coluna alvo."""
+        if not columns:
+            return df.copy()
 
-        proporcao_nulos = df_copia.isnull().mean()
-        colunas_nulos   = proporcao_nulos[proporcao_nulos > limite_nulos].index.tolist()
+        cols_to_drop = [col for col in columns if col in df.columns and col != target_column]
+        return df.drop(columns=cols_to_drop)
 
-        df_copia.drop(columns=colunas_nulos, inplace=True)
-
-        if verbose and colunas_nulos:
-            print(f"[nulos]      Removidas (> {limite_nulos*100:.0f}% nulos): {colunas_nulos}")
-
-        cols_numericas      = df_copia.select_dtypes(include=np.number).columns.tolist()
-        cols_para_variancia = [c for c in cols_numericas if c != coluna_alvo]
-
-        if cols_para_variancia:
-            seletor           = VarianceThreshold(threshold=limite_variancia)
-            seletor.fit(df_copia[cols_para_variancia])
-            colunas_variancia = [
-                col for col, mantida in zip(cols_para_variancia, seletor.get_support())
-                if not mantida
-            ]
-
-            df_copia.drop(columns=colunas_variancia, inplace=True)
-
-            if verbose and colunas_variancia:
-                print(f"[variância]  Removidas (< {limite_variancia}): {colunas_variancia}")
-
-        cols_para_corr = [
-            c for c in df_copia.columns
-            if c != coluna_alvo and df_copia[c].dtype != object
-        ]
-
-        if not cols_para_corr:
-            if verbose:
-                print("[correlação] Nenhuma feature numérica restante para verificar.")
-            return df_copia
-
-        matriz_corr   = df_copia[cols_para_corr].corr().abs()
-        triangulo_sup = matriz_corr.where(
-            np.triu(np.ones(matriz_corr.shape), k=1).astype(bool)
-        )
-        colunas_corr = [
-            col for col in triangulo_sup.columns
-            if any(triangulo_sup[col] > limite_correlacao)
-        ]
-
-        df_copia.drop(columns=colunas_corr, inplace=True)
-
-        if verbose and colunas_corr:
-            print(f"[correlação] Removidas (> {limite_correlacao}): {colunas_corr}")
-
-        if verbose:
-            total_removidas = len(colunas_nulos) + len(colunas_variancia) + len(colunas_corr)
-            print(f"\nTotal removidas: {total_removidas} | Colunas restantes: {df_copia.shape[1]}")
-        return df_copia
-        
-# Lógica para imputar valores nulos usando diferentes estratégias
     @staticmethod
-    def impute( df: pd.DataFrame, strategy: str = 'mean') -> pd.DataFrame:
-        if strategy == 'mean':
-            return df.fillna(df.mean(numeric_only=True)) 
-        elif strategy == 'median':
-            return df.fillna(df.median(numeric_only=True))
-        elif strategy == 'mode':
-            for col in df.columns:
-                mode = df[col].mode()
-                if not mode.empty:
-                    df[col] = df[col].fillna(mode[0])
-            return df 
-        elif strategy == 'zero':
-            return df.fillna(0)
-        else:
-            raise ValueError(f"Estratégia '{strategy}' não reconhecida. Use 'mean', 'median', 'mode' ou 'zero'.") 
-        
-    # REVISAR
-    # encode — codificação de variáveis categóricas (label, onehot)
-    @staticmethod
-    def encode(df,method):
-
-        for coluna in df.columns:
-            if df[coluna].dtype == "object":
-                if method == "label":
-                    # Transforma cada categoria em um valor inteiro
-                    label = LabelEncoder()
-                    df[coluna] = label.fit_transform(df[coluna])
-                elif method == "onehot":
-                    # Cria uma nova coluna para cada categoria
-                    onehot = OneHotEncoder(handle_unknown='ignore')
-                    encoded = onehot.fit_transform(df[[coluna]])
-                    encoded_df = pd.DataFrame(encoded, columns=onehot.get_feature_names_out([coluna]))
-                    df = df.drop(columns = [coluna]).join(encoded_df)
-        return df
-
-# print(Preprocessor.encode(df,encoder))           
-
-# scale — escalonamento de variáveis numéricas (standard, minmax)
-    # def scale():
-    
-        
-    @staticmethod
-    def scale(df: pd.DataFrame, scale_map: dict):
-
+    def impute(df: pd.DataFrame, impute_map: dict[str, str] | None) -> pd.DataFrame:
+        """Imputa valores nulos por coluna conforme o mapa do config."""
         df = df.copy()
+        if not impute_map:
+            return df
 
-        for coluna, scaler_class in scale_map.items():
-
-            # verifica se a coluna existe
-            if coluna not in df.columns:
-                print(f"Coluna '{coluna}' não encontrada")
+        for col, strategy in impute_map.items():
+            if col not in df.columns:
                 continue
 
-            # cria instância do scaler
-            scaler = scaler_class()
+            strategy = str(strategy).lower()
 
-            # aplica transformação
-            df[coluna] = scaler.fit_transform(df[[coluna]])
+            if strategy == "mean":
+                df[col] = df[col].fillna(pd.to_numeric(df[col], errors="coerce").mean())
+            elif strategy == "median":
+                df[col] = df[col].fillna(pd.to_numeric(df[col], errors="coerce").median())
+            elif strategy == "mode":
+                mode = df[col].mode(dropna=True)
+                if not mode.empty:
+                    df[col] = df[col].fillna(mode.iloc[0])
+            elif strategy == "zero":
+                df[col] = df[col].fillna(0)
+            else:
+                raise ValueError(
+                    f"Estratégia de imputação inválida para '{col}': {strategy}. "
+                    "Use mean, median, mode ou zero."
+                )
 
         return df
-    
-class DataPreprocessor:
 
-    def __init__(self, config: str):
-        if isinstance(config, str):         # recebeu caminho do arquivo
-            with open(config, "r") as f:
-               self.config = json.load(f)
-        elif isinstance(config, dict):      # recebeu dicionário direto
+    @staticmethod
+    def encode(df: pd.DataFrame, encode_map: dict[str, str] | None, target_column: str | None = None) -> pd.DataFrame:
+        """Codifica colunas categóricas com label encoding ou one-hot encoding."""
+        df = df.copy()
+        if not encode_map:
+            return df
+
+        for col, method in encode_map.items():
+            if col not in df.columns or col == target_column:
+                continue
+
+            method = str(method).lower()
+
+            if method == "label":
+                encoder = LabelEncoder()
+                df[col] = encoder.fit_transform(df[col].astype(str))
+            elif method == "onehot":
+                dummies = pd.get_dummies(df[col], prefix=col, dummy_na=False)
+                df = pd.concat([df.drop(columns=[col]), dummies], axis=1)
+            else:
+                raise ValueError(
+                    f"Método de encoding inválido para '{col}': {method}. "
+                    "Use label ou onehot."
+                )
+
+        return df
+
+    @staticmethod
+    def scale(df: pd.DataFrame, scale_map: dict[str, str] | None, target_column: str | None = None) -> pd.DataFrame:
+        """Escalona colunas numéricas com standard ou minmax."""
+        df = df.copy()
+        if not scale_map:
+            return df
+
+        scalers = {
+            "standard": StandardScaler,
+            "minmax": MinMaxScaler,
+        }
+
+        for col, method in scale_map.items():
+            if col not in df.columns or col == target_column:
+                continue
+
+            method = str(method).lower()
+            if method not in scalers:
+                raise ValueError(
+                    f"Método de escala inválido para '{col}': {method}. "
+                    "Use standard ou minmax."
+                )
+
+            numeric_col = pd.to_numeric(df[col], errors="coerce")
+            if numeric_col.isna().all():
+                continue
+
+            df[col] = scalers[method]().fit_transform(numeric_col.to_frame())
+
+        return df
+
+
+class DataPreprocessor:
+    """Executa o pré-processamento usando o contrato oficial do config.json."""
+
+    def __init__(self, config: dict[str, Any] | str | Path):
+        if isinstance(config, (str, Path)):
+            with open(config, "r", encoding="utf-8") as f:
+                self.config = json.load(f)
+        elif isinstance(config, dict):
             self.config = config
+        else:
+            raise TypeError("config deve ser dict, str ou Path")
 
     def run(self, df: pd.DataFrame) -> pd.DataFrame:
+        target_column = self.config.get("target_column")
 
-        # 1. Remove colunas desnecessárias
-         coluna_alvo = self.config["required"][-1]
-         df = Preprocessor.drop_col(df, coluna_alvo=coluna_alvo)
-
-        # 2. Imputa nulos nas colunas críticas
-         df = Preprocessor.impute(df, strategy="mean")
-
-        # 3. Codifica colunas categóricas conforme o config
-         encode_map = self.config.get("preprocessing", {}).get("encode", {})
-         df = Preprocessor.encode(df, method=encode_map)
-
-        # 4. Escala colunas numéricas conforme o config
-         scale_map = self.config.get("preprocessing", {}).get("scale", {})
-         df = Preprocessor.scale(df, method=scale_map)
-
-
-         return df
-
-preprocessor = DataPreprocessor("../config.json")
-
-df_limpo = preprocessor.run(DataPreprocessor.df)
-
-
-
+        df = Preprocessor.drop_columns(
+            df,
+            columns=self.config.get("drop_cols", []),
+            target_column=target_column,
+        )
+        df = Preprocessor.impute(
+            df,
+            impute_map=self.config.get("impute", {}),
+        )
+        df = Preprocessor.encode(
+            df,
+            encode_map=self.config.get("encode", {}),   # ← nível raiz
+            target_column=target_column,
+        )
+        df = Preprocessor.scale(
+            df,
+            scale_map=self.config.get("scale", {}),     # ← nível raiz
+            target_column=target_column,
+        )
+        return df
