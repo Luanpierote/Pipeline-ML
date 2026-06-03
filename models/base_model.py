@@ -46,8 +46,40 @@ class BaseModel(ABC):
  
     @abstractmethod
     def run(self, df: pd.DataFrame) -> pd.DataFrame:
+           def run(self, df: pd.DataFrame) -> pd.DataFrame:
         """Executa o modelo e retorna o DataFrame com as predições/rótulos."""
-        ...
+    
+        df_resultado = df.copy()
+    
+        if self._model is None:
+            raise ValueError(
+                "[BaseModel] Nenhum modelo foi carregado. "
+                "Defina 'model_class' no config ou implemente run() na subclasse."
+            )
+    
+        if hasattr(self._model, "fit_predict"):
+            labels = self._model.fit_predict(df)
+    
+        else:
+            self.fit(df)
+    
+            if hasattr(self._model, "predict"):
+                labels = self._model.predict(df)
+            else:
+                raise AttributeError(
+                    "[BaseModel] O modelo não possui predict() nem fit_predict()."
+                )
+    
+        output_column = self.config.get("output_column", "prediction")
+    
+        df_resultado[output_column] = labels
+    
+        self.result_ = {
+            "output_column": output_column,
+            "n_rows": len(df_resultado)
+        }
+    
+        return df_resultado
  
     def summary(self) -> dict:
         """Retorna um resumo dos resultados. Pode ser sobrescrito por subclasses."""
