@@ -1,7 +1,8 @@
 """Classe abstrata base para todos os modelos do pipeline."""
 #  Contrato padrão que todo o modelo do pipeline precisa seguir
-# Princípio: ela não sabe qual algoritmo irá usar
+# Princípio: o Pipeline não sabe qual algoritmo irá usar, ele só vai puxar o método run
 from abc import ABC, abstractmethod
+# arquitetura baseada em configuração dinâmica 
 import importlib
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier 
@@ -39,7 +40,6 @@ class BaseModel(ABC):
         except (ImportError,AttributeError) as e:
             raise ImportError(f"[BaseModel] Não foi possível carregar '{class_path}': {e}")
     
-    @abstractmethod
     def fit(self, df: pd.DataFrame):
         """Treina / ajusta o modelo ao DataFrame pré-processado."""
        
@@ -66,7 +66,6 @@ class BaseModel(ABC):
         return self
         ...
  
-    @abstractmethod
     def run(self, df: pd.DataFrame) -> pd.DataFrame:
         """Executa o modelo e retorna o DataFrame com as predições/rótulos."""
         df_resultado = df.copy()

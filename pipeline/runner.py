@@ -14,37 +14,11 @@ from typing import Any
 import pandas as pd
  
 import importlib
-import inspect
-import pkgutil
  
-import models as _models_pkg
-from models.base_model import BaseModel
 from src.loader        import DataLoader
 from src.validator     import DataValidator
 from src.preprocessor  import DataPreprocessor
  
- 
-# ------------------------------------------------------------------ #
-# Auto-discovery: varre src/models/ recursivamente e registra qualquer
-# classe que herde de BaseModel. O nome do modelo no config.json é o
-# nome da classe em lowercase sem o sufixo "model"
-# (ex: DBSCANModel → "dbscan", KMeansModel → "kmeans")
-# ------------------------------------------------------------------ #
-def _model_registry() -> dict[str, type]:
-        # TODO: criar ao menos DBSCANModel (models/dbscan.py) e RandomForestModel (models/random_forest.py)
-    # cada modelo deve herdar BaseModel e implementar run() e summary()
-    registry = {}
-    pkg_path = _models_pkg.__path__
-    pkg_name = _models_pkg.__name__
- 
-    for finder, mod_name, _ in pkgutil.walk_packages(pkg_path, prefix=pkg_name + "."):
-        module = importlib.import_module(mod_name)
-        for _, cls in inspect.getmembers(module, inspect.isclass):
-            if issubclass(cls, BaseModel) and cls is not BaseModel:
-                key = cls.__name__.lower().removesuffix("model")
-                registry[key] = cls
- 
-    return registry
  
  
 class PipelineRunner:
@@ -117,25 +91,32 @@ class PipelineRunner:
         df_clean = preprocessor.run(df)
         self._log(f"       Shape após pré-processamento: {df_clean.shape}")
         return df_clean
- 
+
+#  Agora qualquer string "sklearn.cluster.DBSCAN" ou "sklearn.ensemble.RandomForestClassifier" funciona automaticamente, sem precisar criar DBSCANModel, RandomForestModel ou qualquer subclasse.
     def _run_model(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
-        model_name = self.config.get("model", "").lower()
-        registry   = _model_registry()
- 
-        if not model_name:
-            raise ValueError("Config deve conter a chave 'model' (ex: 'dbscan').")
-        if model_name not in registry:
-            raise ValueError(
-                f"Modelo '{model_name}' não reconhecido. "
-                f"Disponíveis: {list(registry.keys())}"
-            )
- 
-        self._log(f"\n[4/4] Executando modelo: {model_name.upper()}")
-        model   = registry[model_name](self.config)
-        df_out  = model.run(df)
-        summary = model.summary()
-        self._log(f"       Resultado: {summary}")
-        return df_out, summary
+        model_cfg = self.config.get("model")
+        if not model_cfg:
+            raise ValueError("Config deve conter a chave 'model' com 'model_class' e 'model_params'.")
+
+        model_class_path = model_cfg.get("model_class")
+        model_params     = model_cfg.get("model_params", {})
+
+        if not model_class_path:
+            raise ValueError("'model' deve conter 'model_class' (ex: 'sklearn.cluster.DBSCAN').")
+
+        self._log(f"\n[4/4] Executando modelo: {model_class_path}")
+
+        # importlib — sem registry, sem subclasses
+        module_path, class_name = model_class_path.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        ModelClass = getattr(module, class_name)
+
+        model  = ModelClass(**model_params)
+        df_out = model.fit_predict(df)          # API sklearn padrão
+        # summary genérico — adapte conforme o modelo
+        summary = {"model": model_class_path, "params": model_params}
+
+        return pd.DataFrame({"label": df_out}, index=df.index), summary
  
     def run(self) -> dict[str, Any]:
         """

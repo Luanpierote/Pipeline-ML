@@ -120,18 +120,21 @@ class MLAgent:
         }
 
 
-def run(self) -> dict:
-    """Executa o pipeline completo e retorna o config gerado."""
-    self.analyze()
-    self.configure()
-    return self.config
+    def run(self) -> dict:
+        """Analisa, configura e dispara o PipelineRunner."""
+        self.analyze()
+         # Injeta "source" no config para que o runner saiba onde está o CSV
+        self.configure()          # salva config.json em disco
+        self.config["source"] = self.csv_path
+        
+        runner = PipelineRunner(self.config)
+        return runner.run()       # retorna {"df_result", "summary", "config"}
 
 def run_agent(csv_path: str) -> dict:
     """
     Função de entrada — chamada diretamente no Colab.
     Instancia o agente, analisa, configura e dispara o runner.
     """
-    """Ponto de entrada — instancia o agente, analisa, configura e retorna o resultado."""
     # instancia o agente
     # chama analyze()
     # chama configure()
