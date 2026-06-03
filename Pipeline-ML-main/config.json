@@ -1,0 +1,19 @@
+{
+  "source": "...",
+  "required": [],
+  "critical": [],
+  "unique": [],
+  "ranges": {},
+  "dtypes": {},
+  "drop_cols": [],
+  "impute": {},
+  "preprocessing": {
+    "encode": {},
+    "scale": {}
+  },
+  "target_column": null,
+  "model": {
+    "model_class": "...",
+    "model_params": {}
+  }
+}
