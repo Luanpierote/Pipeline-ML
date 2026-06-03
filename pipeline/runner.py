@@ -118,6 +118,7 @@ class PipelineRunner:
 
         return pd.DataFrame({"label": df_out}, index=df.index), summary
  
+    @staticmethod
     def run(self) -> dict[str, Any]:
         """
         Executa o pipeline completo para um único dataset.
