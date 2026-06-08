@@ -65,3 +65,32 @@ Selecione o interpretador referente ao `.venv`.
 ```bash
 pip list
 ```
+
+## Separação dos Arquivos
+
+```markdown
+📁 Pipeline-ML
+│
+├── 📁 configs                  
+│   └── 📄 test_dataset.jason   # Arquivo do teste do Dataset
+├── 📁 data                     
+│   └── 📄 test_dataset.csv     # Arquivo do teste do dataset
+├── 📁 models                   
+│   └── 📄 base_model.py        # Classe abstrata comum a todos os modelos
+├── 📁 pipeline                 
+│   └── 📄 runner.py            # Orquestra todas as etapas do sistema
+├── 📁 src                      
+│   ├── 📄 loader.py            # Principal função: Carregar os dados     
+│   ├── 📄 prepocessor.py       # Principal função: Aplicar as regras definidas no config.json
+│   └── 📄 validadot.py         # Principal função: Validar esquema, tipos e ranges do DataFrame
+├── 📁 test
+│   ├── 📄 agentTest.py         # Teste do Agente
+│   ├── 📄 basemodelTest.py     # Teste do BaseModel
+│   ├── 📄 dataloaderTest.py    # Teste do Loader
+│   ├── 📄 pipelineTest.py      # Teste do Pipeline
+│   ├── 📄 preprocessor.py      # Teste do Preprocessor
+│   └── 📄 validatorTest.py     # Teste do Validator
+├── 📄 .gitignore               # Arquivo para ignorar outros arquivos
+├── 📄 Readme.md                # Documento para explicar o código
+├── 📄 reporter.py              # Arquivo para repostar erros e gerar relatorios
+└── 📄 main.py                  # Exibe o resultado final 
