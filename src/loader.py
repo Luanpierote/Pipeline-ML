@@ -84,26 +84,87 @@ class DataLoader:
             return None
 
     def _from_api(self, save_folder: Path | None) -> pd.DataFrame:
+        print("ROOT_KEY =", self.root_key)
 
         payload = self._get(str(self.path))
+
         if not payload:
-            raise RuntimeError(f"Falha ao obter dados de {self.path}")
+            raise RuntimeError(
+                f"Falha ao obter dados de {self.path}"
+            )
 
         if self.root_key:
+
             if self.root_key not in payload:
-                raise RuntimeError(f"Chave '{self.root_key}' não encontrada.")
+                raise RuntimeError(
+                    f"Chave '{self.root_key}' não encontrada."
+                )
+
             records = payload[self.root_key]
+
         elif isinstance(payload, list):
+
             records = payload
+
+        elif isinstance(payload, dict):
+
+            list_keys = [
+                k
+                for k, v in payload.items()
+                if isinstance(v, list)
+            ]
+
+            if len(list_keys) == 1:
+
+                records = payload[list_keys[0]]
+
+            elif len(list_keys) > 1:
+
+                raise ValueError(
+                    f"API possui múltiplas listas: {list_keys}. "
+                    "Informe root_key."
+                )
+
+            else:
+
+                raise ValueError(
+                    "Nenhuma lista encontrada na resposta da API."
+                )
+
         else:
-            raise ValueError("API retornou objeto. Informe root_key.")
+
+            raise ValueError(
+                "Formato de resposta não suportado."
+            )
 
         if save_folder:
-            save_folder.mkdir(parents=True, exist_ok=True)
+
+            save_folder.mkdir(
+                parents=True,
+                exist_ok=True
+            )
+
             for record in records:
-                file_id  = record.get("id", hash(json.dumps(record, sort_keys=True)))
+
+                file_id = record.get(
+                    "id",
+                    hash(
+                        json.dumps(
+                            record,
+                            sort_keys=True
+                        )
+                    )
+                )
+
                 filepath = save_folder / f"{file_id}.json"
-                filepath.write_text(json.dumps(record, ensure_ascii=False, indent=2))
+
+                filepath.write_text(
+                    json.dumps(
+                        record,
+                        ensure_ascii=False,
+                        indent=2
+                    )
+                )
 
         return pd.DataFrame(records)
 

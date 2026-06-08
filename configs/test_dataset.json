@@ -1,0 +1,122 @@
+{
+  "source": "../data/test_dataset.csv",
+  "required": [
+    "id",
+    "title",
+    "description",
+    "category",
+    "price",
+    "discountPercentage",
+    "rating",
+    "stock",
+    "tags",
+    "brand",
+    "sku",
+    "weight",
+    "dimensions",
+    "warrantyInformation",
+    "shippingInformation",
+    "availabilityStatus",
+    "reviews",
+    "returnPolicy",
+    "minimumOrderQuantity",
+    "meta",
+    "images",
+    "thumbnail"
+  ],
+  "critical": [
+    "id",
+    "price",
+    "discountPercentage",
+    "rating",
+    "stock",
+    "weight",
+    "minimumOrderQuantity"
+  ],
+  "unique": [
+    "id",
+    "sku"
+  ],
+  "ranges": {
+    "price": [
+      0,
+      null
+    ],
+    "discountPercentage": [
+      0,
+      120
+    ],
+    "rating": [
+      0,
+      5
+    ],
+    "stock": [
+      0,
+      null
+    ]
+  },
+  "dtypes": {
+    "id": "int64",
+    "title": "str",
+    "description": "str",
+    "category": "str",
+    "price": "float64",
+    "discountPercentage": "float64",
+    "rating": "float64",
+    "stock": "int64",
+    "tags": "str",
+    "brand": "str",
+    "sku": "str",
+    "weight": "int64",
+    "dimensions": "str",
+    "warrantyInformation": "str",
+    "shippingInformation": "str",
+    "availabilityStatus": "str",
+    "reviews": "str",
+    "returnPolicy": "str",
+    "minimumOrderQuantity": "int64",
+    "meta": "str",
+    "images": "str",
+    "thumbnail": "str"
+  },
+  "drop_cols": [
+    "id",
+    "dimensions",
+    "reviews",
+    "thumbnail",
+    "sku",
+    "description",
+    "meta",
+    "title",
+    "images"
+  ],
+  "impute": {
+    "brand": "mode"
+  },
+  "encode": {
+    "category": "label",
+    "tags": "onehot",
+    "brand": "onehot",
+    "warrantyInformation": "label",
+    "shippingInformation": "label",
+    "availabilityStatus": "label",
+    "returnPolicy": "label"
+  },
+  "scale": {
+    "price": "standard",
+    "discountPercentage": "standard",
+    "rating": "standard",
+    "stock": "standard",
+    "weight": "standard",
+    "minimumOrderQuantity": "standard"
+  },
+  "target_column": "category",
+  "model": {
+    "model_class": "sklearn.ensemble.RandomForestClassifier",
+    "model_params": {
+      "n_estimators": 100,
+      "random_state": 42
+    },
+    "target": "category"
+  }
+}

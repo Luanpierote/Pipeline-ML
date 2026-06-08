@@ -42,6 +42,7 @@ class DataValidator:
     critical  : list[str]               — colunas que não podem ter nulos
     ranges    : {col: [min, max]}       — limites numéricos aceitáveis
     unique    : list[str]               — colunas sem duplicatas permitidas
+    dtypes    : dict[str,str]           — tipo esperado para cada coluna
     """
 
     def __init__(self, df: pd.DataFrame, config: dict):
@@ -77,4 +78,24 @@ class DataValidator:
         if unique_cols and df.duplicated(subset=unique_cols).any():
             result.add_warning(f"Duplicatas encontradas nas colunas: {unique_cols}")
 
+        for col, expected_dtype in self.config.get("dtypes",{}).items():
+
+            if col not in df.columns:
+                continue
+
+            actual_dtype = str(df[col].dtype)
+
+            if expected_dtype == "str":
+
+                 if actual_dtype not in ("object", "string", "str"):
+                    result.add_error(
+                    f"Coluna '{col}' deveria ser texto."
+                  )
+
+            elif actual_dtype != expected_dtype:
+                result.add_error(
+                    f"Coluna '{col}' deveria ser {expected_dtype}, "
+                    f"mas recebeu {actual_dtype}"
+                )
+                
         return result

@@ -26,7 +26,9 @@ class BaseModel(ABC):
             "model_params" : { "eps": 0.5, "min_samples": 5 }
         Se não houver model_class, retorna None (subclasse cuida disso).
         """
-        class_path = self.config.get("model_class")
+        model_cfg = self.config.get("model", {})
+        class_path = model_cfg.get("model_class")
+        params = model_cfg.get("model_params", {})
         if not class_path:
             return None
 
@@ -34,7 +36,6 @@ class BaseModel(ABC):
         try:
             module_path , class_name = class_path.rsplit(".",1)
             cls = getattr(importlib.import_module(module_path),class_name)
-            params = self.config.get("model_params", {})
             return cls(**params)
         
         except (ImportError,AttributeError) as e:
@@ -43,28 +44,28 @@ class BaseModel(ABC):
     def fit(self, df: pd.DataFrame):
         """Treina / ajusta o modelo ao DataFrame pré-processado."""
        
-        coluna_alvo = self.config.get("target_column", df.columns[-1])
+        coluna_alvo = self.config.get(
+            "target_column",
+            df.columns[-1]
+        )
 
-        # Valida se a coluna alvo existe no DataFrame
         if coluna_alvo not in df.columns:
-            raise ValueError(f"Coluna alvo '{coluna_alvo}' não encontrada no DataFrame.")
+            raise ValueError(
+                f"Coluna alvo '{coluna_alvo}' não encontrada."
+            )
 
-        # Separa os dados de entrada (X) e os rótulos/valores alvo (y)        
-        X = df.drop(columns=[coluna_alvo]) 
+        X = df.drop(columns=[coluna_alvo])
         y = df[coluna_alvo]
 
-        max_depth = self.config.get("max_depth", 10)
-        
-        # Estimator com self. para ele ficar salvo no modelo
-        self.estimator = RandomForestClassifier(max_depth=max_depth, random_state=42)
-        self.estimator.fit(X, y)        
-        
-        # 3. Correção: self.result_ (com underline no final, igual estava na sua classe abstrata BaseModel)
-        # E corrigido para X.columns maiúsculo
-        self.result_ = f"RandomForest treinado com sucesso. Features utilizadas: {list(X.columns)}"
+        self._model.fit(X, y)
+
+        self.result_ = (
+            f"Modelo treinado com sucesso. "
+            f"Features utilizadas: {list(X.columns)}"
+        )
 
         return self
-        ...
+        
  
     def run(self, df: pd.DataFrame) -> pd.DataFrame:
         """Executa o modelo e retorna o DataFrame com as predições/rótulos."""
@@ -81,13 +82,15 @@ class BaseModel(ABC):
     
         else:
             self.fit(df)
-    
-            if hasattr(self._model, "predict"):
-                labels = self._model.predict(df)
-            else:
-                raise AttributeError(
-                    "[BaseModel] O modelo não possui predict() nem fit_predict()."
-                )
+
+            coluna_alvo = self.config.get(
+                "target_column",
+                df.columns[-1]
+            )
+
+            X = df.drop(columns=[coluna_alvo])
+
+            labels = self._model.predict(X)
     
         output_column = self.config.get("output_column", "prediction")
     
