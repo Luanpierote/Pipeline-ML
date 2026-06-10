@@ -33,9 +33,9 @@ Se ativou corretamente, o terminal exibirá algo como:
 ---
  
 ## 3. Instalar dependências
- 
+ Criamos um arquivo em txt para melhorar o import dependências
 ```bash
-pip install pandas requests
+pip install -r requirements.txt
 ```
  
 ---
@@ -64,11 +64,22 @@ Selecione o interpretador referente ao `.venv`.
  
 ```bash
 pip list
+```
+---
+# Testar o programa
+Abrindo a pastas dos aquivos e acessando o terminal
+```bash
+# Para entrar nos arquivos de teste
+cd .\test\
 
-Caso dê algum erro digite:
-'pip install -r requirements.txt'
 ```
 
+```bash
+# Para começar o programa digite
+
+python .\pipelineTest.py
+```
+---
 ## Separação dos Arquivos
 
 ```markdown
